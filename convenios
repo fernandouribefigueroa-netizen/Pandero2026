@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pandero — Estrategia Lookalike FFAA & PNP</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --blue:#1B3D8B; --blue2:#2552B8; --blue3:#EBF0FB;
+  --red:#CC2929;  --red2:#E63232; --reddim:rgba(204,41,41,.1);
+  --white:#fff; --g1:#F4F6FA; --g2:#E8EDF5; --g3:#9BACC8;
+  --dark:#0D1E47; --text:#1A2B52; --muted:#6B7EA8;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Open Sans',sans-serif;background:var(--g1);color:var(--text);height:100vh;overflow:hidden}
+
+.bg-dots{position:fixed;inset:0;background-image:radial-gradient(circle,rgba(27,61,139,.06) 1px,transparent 1px);background-size:32px 32px;pointer-events:none;z-index:0}
+.glow{position:fixed;width:480px;height:480px;border-radius:50%;background:radial-gradient(circle,rgba(27,61,139,.07) 0%,transparent 70%);top:-80px;right:-80px;pointer-events:none;z-index:0;animation:gP 7s ease-in-out infinite}
+@keyframes gP{0%,100%{transform:scale(1)}50%{transform:scale(1.14)}}
+
+/* HEADER */
+.hbar{position:fixed;top:0;left:0;right:0;height:58px;background:var(--white);border-bottom:3px solid var(--blue);display:flex;align-items:center;justify-content:space-between;padding:0 36px;z-index:200;box-shadow:0 2px 12px rgba(27,61,139,.08)}
+.hbar img{height:36px;object-fit:contain}
+.htags{display:flex;gap:10px;align-items:center}
+.htag{font-family:'Montserrat',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;padding:4px 12px;border-radius:4px}
+.htag.red{background:var(--red);color:var(--white)}
+.htag.blue{background:var(--blue3);color:var(--blue);border:1px solid rgba(27,61,139,.2)}
+.hdate{font-size:11px;color:var(--muted);font-family:'Montserrat',sans-serif;font-weight:600}
+
+/* DECK */
+.deck{position:relative;width:100%;height:100vh}
+.slide{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:74px 52px 62px;opacity:0;pointer-events:none;transition:opacity .5s ease;overflow:hidden}
+.slide.active{opacity:1;pointer-events:all}
+.slide>*{position:relative;z-index:1}
+
+/* NAV */
+.nav{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:12px;z-index:100;background:var(--white);box-shadow:0 4px 18px rgba(27,61,139,.12);padding:7px 16px;border-radius:40px;border:1px solid var(--g2)}
+.nav button{width:30px;height:30px;border-radius:50%;border:1.5px solid var(--blue);background:none;color:var(--blue);cursor:pointer;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.nav button:hover{background:var(--blue);color:var(--white)}
+.dots{display:flex;gap:6px;align-items:center}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--g3);cursor:pointer;transition:all .3s}
+.dot.active{background:var(--blue);width:20px;border-radius:4px}
+.sc{font-family:'Montserrat',sans-serif;font-size:10px;font-weight:600;color:var(--muted);min-width:28px;text-align:right}
+
+/* SHARED */
+.inner{width:100%;max-width:1060px}
+.eyebrow{font-family:'Montserrat',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.25em;color:var(--red);margin-bottom:6px;opacity:0;animation:fD .5s .15s forwards}
+.stitle{font-family:'Montserrat',sans-serif;font-weight:800;font-size:clamp(26px,3.2vw,42px);line-height:1.1;color:var(--blue);margin-bottom:4px;opacity:0;animation:fD .5s .28s forwards}
+.stitle em{color:var(--red);font-style:normal}
+.ssub{font-size:12.5px;color:var(--muted);margin-bottom:20px;opacity:0;animation:fD .5s .38s forwards}
+.divider{width:48px;height:4px;background:linear-gradient(90deg,var(--red),var(--blue));border-radius:2px;margin-bottom:18px;opacity:0;animation:fU .5s .3s forwards}
+
+@keyframes fD{from{opacity:0;transform:translateY(-13px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fU{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fL{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+.slide:not(.active) *{animation:none!important;opacity:0!important}
+
+/* ══ S1 ══ */
+#s1{background:var(--white)}
+.s1g{display:grid;grid-template-columns:1.1fr 1fr;gap:44px;align-items:center;width:100%;max-width:1060px}
+.s1tag{display:inline-flex;align-items:center;gap:7px;background:var(--blue3);border:1px solid rgba(27,61,139,.2);border-radius:6px;padding:5px 13px;font-family:'Montserrat',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.15em;color:var(--blue);margin-bottom:14px;opacity:0;animation:fD .5s .1s forwards}
+.s1h{font-family:'Montserrat',sans-serif;font-weight:900;font-size:clamp(30px,3.8vw,50px);line-height:1.05;color:var(--dark);margin-bottom:16px;opacity:0;animation:fD .5s .25s forwards}
+.s1h em{color:var(--red);font-style:normal}
+.s1h span{color:var(--blue)}
+.s1p{font-size:13.5px;line-height:1.75;color:var(--muted);max-width:420px;opacity:0;animation:fU .5s .4s forwards}
+.s1cards{display:flex;flex-direction:column;gap:10px;opacity:0;animation:fL .5s .55s forwards}
+.scard{background:var(--g1);border:1.5px solid var(--g2);border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:12px;transition:all .25s}
+.scard:hover{border-color:var(--blue);background:var(--blue3);transform:translateX(4px)}
+.sico{width:42px;height:42px;background:var(--white);border:1.5px solid var(--g2);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.sinf h4{font-family:'Montserrat',sans-serif;font-size:12.5px;font-weight:700;color:var(--blue);margin-bottom:2px}
+.sinf p{font-size:11px;color:var(--muted);line-height:1.45}
+.sbadge{margin-left:auto;flex-shrink:0;font-family:'Montserrat',sans-serif;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;padding:3px 7px;border-radius:4px}
+.sbadge.g{background:rgba(39,174,96,.12);color:#1a9e5c;border:1px solid rgba(39,174,96,.3)}
+.sbadge.o{background:rgba(230,126,34,.12);color:#c07020;border:1px solid rgba(230,126,34,.3)}
+
+/* ══ S2 ══ */
+#s2{background:var(--dark)}
+#s2 .eyebrow{color:rgba(255,255,255,.4)}
+#s2 .stitle{color:var(--white)}
+#s2 .ssub{color:rgba(255,255,255,.38)}
+#s2 .divider{background:linear-gradient(90deg,var(--red2),#4A7AFF)}
+.flow{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;opacity:0;animation:fU .6s .45s forwards}
+.fc{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:11px;padding:20px 15px;text-align:center;position:relative;transition:all .25s}
+.fc:hover{border-color:rgba(255,255,255,.28);transform:translateY(-3px)}
+.fc::after{content:'→';position:absolute;right:-12px;top:50%;transform:translateY(-50%);color:rgba(255,255,255,.2);font-size:16px;z-index:2}
+.fc:last-child::after{display:none}
+.fcn{font-family:'Montserrat',sans-serif;font-size:32px;font-weight:900;color:rgba(255,255,255,.05);line-height:1;margin-bottom:5px}
+.fci{font-size:24px;margin-bottom:8px;display:block}
+.fct{font-family:'Montserrat',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+.fct.r{color:#FF8A8A}.fct.b{color:#7EB8FF}.fct.gn{color:#7EE7A0}.fct.gd{color:#FFD57E}
+.fcd{font-size:11px;color:rgba(255,255,255,.5);line-height:1.6}
+.fctag{margin-top:10px;font-size:10px;padding:4px 9px;border-radius:5px;font-family:'Montserrat',sans-serif;font-weight:600;display:inline-block}
+.fctag.bad{background:rgba(204,41,41,.2);color:#FF9090;border:1px solid rgba(204,41,41,.3)}
+.fctag.good{background:rgba(39,174,96,.2);color:#7EE7A0;border:1px solid rgba(39,174,96,.3)}
+.fctag.info{background:rgba(37,82,184,.3);color:#90BFFF;border:1px solid rgba(37,82,184,.5)}
+
+/* ══ S3 ══ */
+#s3{background:var(--g1)}
+.mrow{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;opacity:0;animation:fU .6s .45s forwards}
+.mc{background:var(--white);border:1.5px solid var(--g2);border-radius:12px;padding:22px 18px;text-align:center;position:relative;overflow:hidden;transition:all .25s;box-shadow:0 2px 8px rgba(27,61,139,.05)}
+.mc:hover{border-color:var(--blue);transform:translateY(-3px);box-shadow:0 8px 20px rgba(27,61,139,.11)}
+.mc::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.mc.bl::before{background:var(--blue)}
+.mc.rd::before{background:var(--red)}
+.mc.dk::before{background:var(--dark)}
+.mlb{font-family:'Montserrat',sans-serif;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.15em;color:var(--muted);margin-bottom:9px}
+.mv{font-family:'Montserrat',sans-serif;font-weight:900;font-size:clamp(30px,3.8vw,44px);color:var(--blue);line-height:1;margin-bottom:5px}
+.mv.r{color:var(--red)}
+.msb{font-size:11px;color:var(--muted);line-height:1.5}
+.barsec{margin-top:16px;background:var(--white);border:1.5px solid var(--g2);border-radius:12px;padding:18px 26px;box-shadow:0 2px 8px rgba(27,61,139,.05);opacity:0;animation:fU .6s .62s forwards}
+.bh{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.bhl{font-size:11.5px;color:var(--muted);font-family:'Montserrat',sans-serif;font-weight:600}
+.bhv{font-family:'Montserrat',sans-serif;font-size:12.5px;font-weight:700;color:var(--blue)}
+.btrack{background:var(--g2);height:10px;border-radius:5px;overflow:hidden;margin-bottom:7px}
+.bfill{height:100%;background:linear-gradient(90deg,var(--blue),var(--blue2));border-radius:5px;width:0;transition:width 1.4s cubic-bezier(.16,1,.3,1)}
+.bfoot{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);font-family:'Montserrat',sans-serif;font-weight:600;text-transform:uppercase;letter-spacing:.1em}
+.bfoot .bp{color:var(--blue);background:var(--blue3);padding:2px 8px;border-radius:4px}
+
+/* ══ S4 ══ */
+#s4{background:var(--white)}
+.sces{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;opacity:0;animation:fU .6s .45s forwards}
+.sce{border-radius:12px;padding:20px 16px;border:1.5px solid var(--g2);background:var(--g1);position:relative;transition:all .25s}
+.sce:hover{transform:translateY(-4px)}
+.sce.ft{background:var(--blue);border-color:var(--blue)}
+.rtag{position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:var(--red);color:var(--white);font-family:'Montserrat',sans-serif;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;padding:3px 10px;border-radius:4px;white-space:nowrap}
+.stype{font-family:'Montserrat',sans-serif;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.18em;margin-bottom:9px}
+.sce:not(.ft) .stype{color:var(--muted)}
+.sce.ft .stype{color:rgba(255,255,255,.5)}
+.samt{font-family:'Montserrat',sans-serif;font-weight:900;font-size:40px;line-height:1;margin-bottom:2px}
+.sce:not(.ft) .samt{color:var(--dark)}
+.sce.ft .samt{color:var(--white)}
+.sper{font-size:11px;margin-bottom:15px;font-family:'Montserrat',sans-serif;font-weight:600}
+.sce:not(.ft) .sper{color:var(--muted)}
+.sce.ft .sper{color:rgba(255,255,255,.55)}
+.sr{display:flex;justify-content:space-between;align-items:center;padding:6px 0;font-size:11.5px;border-bottom:1px solid}
+.sce:not(.ft) .sr{border-color:var(--g2)}
+.sce.ft .sr{border-color:rgba(255,255,255,.1)}
+.sr:last-child{border-bottom:none}
+.sce:not(.ft) .sk{color:var(--muted)}
+.sce.ft .sk{color:rgba(255,255,255,.55)}
+.sce:not(.ft) .sv{color:var(--blue);font-weight:700;font-family:'Montserrat',sans-serif;font-size:11px}
+.sce.ft .sv{color:var(--white);font-weight:700;font-family:'Montserrat',sans-serif;font-size:11px}
+.sr.hl .sv{font-size:14px!important}
+.sce:not(.ft) .sr.hl .sv{color:var(--red)!important}
+.sce.ft .sr.hl .sv{color:#FFD57E!important}
+
+/* ══ S5 ══ */
+#s5{background:var(--g1)}
+.ag{display:grid;grid-template-columns:1fr 1fr;gap:14px;opacity:0;animation:fU .6s .45s forwards}
+.ac{background:var(--white);border:1.5px solid var(--g2);border-radius:12px;padding:18px 17px;box-shadow:0 2px 8px rgba(27,61,139,.05)}
+.act{font-family:'Montserrat',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.18em;color:var(--blue);margin-bottom:13px;padding-bottom:9px;border-bottom:2px solid var(--g2)}
+.tli{display:flex;gap:11px;margin-bottom:10px;align-items:flex-start}
+.tldw{display:flex;flex-direction:column;align-items:center}
+.tld{width:26px;height:26px;border-radius:50%;background:var(--blue3);border:2px solid var(--blue);display:flex;align-items:center;justify-content:center;font-family:'Montserrat',sans-serif;font-size:10px;font-weight:800;color:var(--blue);flex-shrink:0}
+.tll{width:2px;flex:1;background:var(--g2);margin:3px 0;min-height:10px}
+.tlc{flex:1}
+.tlw{font-family:'Montserrat',sans-serif;font-size:10px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.1em}
+.tla{font-size:12px;font-weight:600;color:var(--dark);margin-bottom:1px}
+.tld2{font-size:11px;color:var(--muted);line-height:1.4}
+.kr{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--g2);font-size:11.5px}
+.kr:last-of-type{border-bottom:none}
+.kn{color:var(--muted)}
+.kv{font-family:'Montserrat',sans-serif;font-size:11px;font-weight:700;color:var(--white);background:var(--blue);padding:3px 9px;border-radius:5px}
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.chip{background:var(--blue3);border:1px solid rgba(27,61,139,.2);color:var(--blue);font-family:'Montserrat',sans-serif;font-size:10px;font-weight:600;padding:4px 9px;border-radius:20px}
+.chip.r{background:var(--reddim);border-color:rgba(204,41,41,.25);color:var(--red)}
+.ctarow{grid-column:1/-1;background:linear-gradient(90deg,var(--blue),var(--blue2));border-radius:12px;padding:17px 24px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 6px 18px rgba(27,61,139,.22)}
+.ctarow .ct{font-family:'Montserrat',sans-serif;font-size:15px;font-weight:800;color:var(--white);text-transform:uppercase;letter-spacing:.05em}
+.ctarow .cs{font-size:11px;color:rgba(255,255,255,.5);margin-top:3px}
+.ctabtn{background:var(--red);color:var(--white);font-family:'Montserrat',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;padding:9px 20px;border-radius:7px;border:none;cursor:pointer;transition:background .2s}
+.ctabtn:hover{background:var(--red2)}
+</style>
+</head>
+<body>
+<div class="bg-dots"></div>
+<div class="glow"></div>
+
+<!-- HEADER -->
+<div class="hbar">
+  <img src="https://s3.amazonaws.com/media.greatplacetowork.com/peru/best-workplaces-in-peru/2021/de+251+a+1%2C000/14.+Pandero/LOGO-Pandero_ALTA-2021.png" alt="Pandero">
+  <div class="htags">
+    <span class="htag blue">Convenios Institucionales</span>
+    <span class="htag red">Meta Lookalike FFAA/PNP</span>
+    <span class="hdate">2025</span>
+  </div>
+</div>
+
+<!-- DECK -->
+<div class="deck" id="deck">
+
+<!-- ── SLIDE 1 ── -->
+<div class="slide active" id="s1">
+  <div class="s1g">
+    <div>
+      <div class="s1tag">📋 Slide 01 / 05 — Oportunidad</div>
+      <h1 class="s1h">UN SEGMENTO<br><em>DESATENDIDO</em><br>CON ALTO<br><span>POTENCIAL</span></h1>
+      <p class="s1p">PNP, Marina y Fuerzas Armadas son un segmento premium para Pandero: empleo garantizado, descuento institucional activo y alta afinidad con el modelo de fondos colectivos — sin banco.</p>
+    </div>
+    <div class="s1cards">
+      <div class="scard">
+        <div class="sico">🚔</div>
+        <div class="sinf"><h4>Policía Nacional del Perú (PNP)</h4><p>+120,000 efectivos · Convenio Pandero vigente</p></div>
+        <span class="sbadge g">ACTIVO</span>
+      </div>
+      <div class="scard">
+        <div class="sico">⚓</div>
+        <div class="sinf"><h4>Marina de Guerra del Perú</h4><p>Personal con ingresos fijos y disciplina financiera</p></div>
+        <span class="sbadge g">ACTIVO</span>
+      </div>
+      <div class="scard">
+        <div class="sico">🎖️</div>
+        <div class="sinf"><h4>Fuerzas Armadas (FFAA)</h4><p>Ejército, FAP y ramas · alcance costa y sierra</p></div>
+        <span class="sbadge o">EN ESCALA</span>
+      </div>
+      <div class="scard" style="border-color:rgba(27,61,139,.25);background:var(--blue3)">
+        <div class="sico">🏆</div>
+        <div class="sinf"><h4>Por qué son el cliente ideal</h4><p>Empleo garantizado · Descuento institucional · Sin banco</p></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── SLIDE 2 ── -->
+<div class="slide" id="s2">
+  <div class="inner">
+    <div class="eyebrow">📋 Slide 02 / 05 — Estrategia</div>
+    <h2 class="stitle">LA SOLUCIÓN: <em>META LOOKALIKE</em></h2>
+    <p class="ssub">Llegamos al segmento sin acceso directo a la base institucional</p>
+    <div class="divider"></div>
+    <div class="flow">
+      <div class="fc">
+        <div class="fcn">01</div><span class="fci">🚫</span>
+        <div class="fct r">El Problema</div>
+        <p class="fcd">PNP y FFAA no comparten su base de datos por normativa de privacidad institucional.</p>
+        <span class="fctag bad">❌ Acceso directo bloqueado</span>
+      </div>
+      <div class="fc">
+        <div class="fcn">02</div><span class="fci">🗂️</span>
+        <div class="fct b">Seed Pandero</div>
+        <p class="fcd">Extraemos de nuestra propia base los clientes que declararon ser PNP / FFAA al suscribirse.</p>
+        <span class="fctag good">✅ First-party · Privacy-safe</span>
+      </div>
+      <div class="fc">
+        <div class="fcn">03</div><span class="fci">🤖</span>
+        <div class="fct gn">LAL 2% Meta</div>
+        <p class="fcd">Meta identifica perfiles similares en todo Perú con su algoritmo de similitud de comportamiento.</p>
+        <span class="fctag info">Score 100/100 · Advantage+</span>
+      </div>
+      <div class="fc">
+        <div class="fcn">04</div><span class="fci">🎯</span>
+        <div class="fct gd">Lead Ads</div>
+        <p class="fcd">Captamos leads con alta probabilidad de pertenecer al segmento a escala nacional.</p>
+        <span class="fctag good">🎯 CPL Target: $4 USD</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── SLIDE 3 ── -->
+<div class="slide" id="s3">
+  <div class="inner">
+    <div class="eyebrow">📋 Slide 03 / 05 — Dimensionamiento</div>
+    <h2 class="stitle">DIMENSIONAMIENTO DE <em>AUDIENCIA</em></h2>
+    <p class="ssub">Base seed Pandero → Lookalike 2% Meta Ads · Perú</p>
+    <div class="divider"></div>
+    <div class="mrow">
+      <div class="mc rd">
+        <div class="mlb">Clientes Seed (PNP + FFAA)</div>
+        <div class="mv r">&lt; 1K</div>
+        <div class="msb">Clientes Pandero que declararon<br>ser miembros de FFAA / PNP</div>
+      </div>
+      <div class="mc bl">
+        <div class="mlb">Audiencia LAL 2% — Mínimo</div>
+        <div class="mv" id="cmin">—</div>
+        <div class="msb">Perfiles alcanzables en Perú<br>Estimado inferior Meta Ads</div>
+      </div>
+      <div class="mc dk">
+        <div class="mlb">Audiencia LAL 2% — Máximo</div>
+        <div class="mv" id="cmax">—</div>
+        <div class="msb">Perfiles alcanzables en Perú<br>Estimado superior Meta Ads</div>
+      </div>
+    </div>
+    <div class="barsec">
+      <div class="bh">
+        <span class="bhl">Amplitud de audiencia — Definición del público Meta Ads</span>
+        <span class="bhv">538,500 – 633,500 personas</span>
+      </div>
+      <div class="btrack"><div class="bfill" id="bar1"></div></div>
+      <div class="bfoot">
+        <span>ACOTADO</span>
+        <span class="bp">◀ TU PÚBLICO — AMPLIO ▶</span>
+        <span>AMPLIO</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── SLIDE 4 ── -->
+<div class="slide" id="s4">
+  <div class="inner">
+    <div class="eyebrow">📋 Slide 04 / 05 — Plan de Medios</div>
+    <h2 class="stitle">PLAN DE MEDIOS & <em>PROYECCIÓN DE LEADS</em></h2>
+    <p class="ssub">CPL benchmark: <strong style="color:var(--blue)">$4 USD</strong> por lead · Meta Lead Ads · Perú · Advantage+ activado</p>
+    <div class="divider"></div>
+    <div class="sces">
+      <div class="sce">
+        <div class="stype">Escenario 01 — Conservador</div>
+        <div class="samt">$500</div>
+        <div class="sper">USD / mes</div>
+        <div class="sr"><span class="sk">Leads / mes</span><span class="sv">125</span></div>
+        <div class="sr"><span class="sk">Leads / trimestre</span><span class="sv">375</span></div>
+        <div class="sr hl"><span class="sk">Leads / año</span><span class="sv">1,500</span></div>
+        <div class="sr"><span class="sk">Inversión anual</span><span class="sv">$6,000</span></div>
+        <div class="sr"><span class="sk">CPL</span><span class="sv">$4.00</span></div>
+      </div>
+      <div class="sce ft">
+        <span class="rtag">⭐ RECOMENDADO</span>
+        <div class="stype">Escenario 02 — Moderado</div>
+        <div class="samt">$1,500</div>
+        <div class="sper">USD / mes</div>
+        <div class="sr"><span class="sk">Leads / mes</span><span class="sv">375</span></div>
+        <div class="sr"><span class="sk">Leads / trimestre</span><span class="sv">1,125</span></div>
+        <div class="sr hl"><span class="sk">Leads / año</span><span class="sv">4,500</span></div>
+        <div class="sr"><span class="sk">Inversión anual</span><span class="sv">$18,000</span></div>
+        <div class="sr"><span class="sk">CPL</span><span class="sv">$4.00</span></div>
+      </div>
+      <div class="sce">
+        <div class="stype">Escenario 03 — Agresivo</div>
+        <div class="samt">$3,000</div>
+        <div class="sper">USD / mes</div>
+        <div class="sr"><span class="sk">Leads / mes</span><span class="sv">750</span></div>
+        <div class="sr"><span class="sk">Leads / trimestre</span><span class="sv">2,250</span></div>
+        <div class="sr hl"><span class="sk">Leads / año</span><span class="sv">9,000</span></div>
+        <div class="sr"><span class="sk">Inversión anual</span><span class="sv">$36,000</span></div>
+        <div class="sr"><span class="sk">CPL</span><span class="sv">$4.00</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── SLIDE 5 ── -->
+<div class="slide" id="s5">
+  <div class="inner">
+    <div class="eyebrow">📋 Slide 05 / 05 — Activación</div>
+    <h2 class="stitle">PLAN DE <em>ACTIVACIÓN</em></h2>
+    <p class="ssub">Timeline · KPIs · Creativos recomendados · Siguiente paso</p>
+    <div class="divider"></div>
+    <div class="ag">
+      <div class="ac">
+        <div class="act">⏱ Timeline de Lanzamiento</div>
+        <div class="tli">
+          <div class="tldw"><div class="tld">1</div><div class="tll"></div></div>
+          <div class="tlc"><div class="tlw">Semana 1</div><div class="tla">Setup & Audiencias</div><div class="tld2">Carga BBDD seed · Público Personalizado · Generación LAL 2%</div></div>
+        </div>
+        <div class="tli">
+          <div class="tldw"><div class="tld">2</div><div class="tll"></div></div>
+          <div class="tlc"><div class="tlw">Semana 2</div><div class="tla">Producción de Creativos</div><div class="tld2">Piezas con descuento institucional · Copies aprobados · Formatos Lead Ads</div></div>
+        </div>
+        <div class="tli">
+          <div class="tldw"><div class="tld">3</div><div class="tll"></div></div>
+          <div class="tlc"><div class="tlw">Semana 3</div><div class="tla">Go Live</div><div class="tld2">Lanzamiento Lead Ads · Advantage+ activado · Monitoreo diario CPL</div></div>
+        </div>
+        <div class="tli">
+          <div class="tldw"><div class="tld" style="border-color:#27AE60;background:rgba(39,174,96,.1);color:#1a9e5c">4</div></div>
+          <div class="tlc"><div class="tlw" style="color:#1a9e5c">Semana 4+</div><div class="tla">Optimización Continua</div><div class="tld2">A/B test creativos · Ajuste de presupuesto · Reporte semanal</div></div>
+        </div>
+      </div>
+      <div>
+        <div class="ac" style="margin-bottom:14px">
+          <div class="act">📊 KPIs de Monitoreo</div>
+          <div class="kr"><span class="kn">CPL objetivo</span><span class="kv">≤ $4.00 USD</span></div>
+          <div class="kr"><span class="kn">CTR esperado</span><span class="kv">≥ 1.5%</span></div>
+          <div class="kr"><span class="kn">Frecuencia máx.</span><span class="kv">≤ 3x / sem</span></div>
+          <div class="kr"><span class="kn">Apertura de form</span><span class="kv">≥ 30%</span></div>
+          <div class="kr"><span class="kn">Score campaña Meta</span><span class="kv">≥ 80/100</span></div>
+        </div>
+        <div class="ac">
+          <div class="act">🎨 Creativos Recomendados</div>
+          <div class="chips">
+            <span class="chip r">🎖️ Descuento FFAA/PNP</span>
+            <span class="chip">📋 Sin banco · Sin intereses</span>
+            <span class="chip r">🚗 Autos · 🏠 Casas</span>
+            <span class="chip">🎬 Video testimonial</span>
+          </div>
+        </div>
+      </div>
+      <div class="ctarow">
+        <div>
+          <div class="ct">Siguiente paso: aprobar escenario de inversión</div>
+          <div class="cs">Equipo de Convenios Institucionales + Digital Marketing · Pandero 2025</div>
+        </div>
+        <button class="ctabtn">Aprobar Plan →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- end deck -->
+
+<!-- NAV -->
+<div class="nav">
+  <button onclick="go(cur-1)">&#9664;</button>
+  <div class="dots" id="dots"></div>
+  <button onclick="go(cur+1)">&#9654;</button>
+  <span class="sc" id="sc">1 / 5</span>
+</div>
+
+<script>
+const slides = document.querySelectorAll('.slide');
+const dotsEl = document.getElementById('dots');
+const scEl   = document.getElementById('sc');
+let cur = 0, animated = new Set();
+
+slides.forEach((_,i)=>{
+  const d = document.createElement('div');
+  d.className='dot'+(i===0?' active':'');
+  d.onclick=()=>go(i);
+  dotsEl.appendChild(d);
+});
+
+function go(n){
+  slides[cur].classList.remove('active');
+  dotsEl.children[cur].classList.remove('active');
+  cur=(n+slides.length)%slides.length;
+  slides[cur].classList.add('active');
+  dotsEl.children[cur].classList.add('active');
+  scEl.textContent=`${cur+1} / ${slides.length}`;
+  onEnter(cur);
+}
+
+function onEnter(i){
+  if(animated.has(i)) return;
+  animated.add(i);
+  if(i===2){
+    setTimeout(()=>{
+      document.getElementById('bar1').style.width='78%';
+      count('cmin',538500,v=>Math.round(v/1000)+'K');
+      count('cmax',633500,v=>Math.round(v/1000)+'K');
+    },600);
+  }
+}
+
+function count(id,target,fmt){
+  const el=document.getElementById(id); if(!el) return;
+  const dur=1200, t0=performance.now();
+  (function tick(ts){
+    const p=Math.min((ts-t0)/dur,1), e=1-Math.pow(1-p,3);
+    el.textContent=fmt(Math.round(e*target));
+    if(p<1) requestAnimationFrame(tick);
+  })(t0);
+}
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight'||e.key===' ') go(cur+1);
+  if(e.key==='ArrowLeft') go(cur-1);
+});
+
+onEnter(0);
+</script>
+</body>
+</html>
